@@ -34,3 +34,11 @@ jobs:
 
       - name: Build OpenNext Worker bundle
         run: npm run cloudflare:build
+
+      - name: Upload OpenNext Worker bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: mob-hub-opennext-worker
+          path: .open-next/
+          if-no-files-found: error
+          retention-days: 7
