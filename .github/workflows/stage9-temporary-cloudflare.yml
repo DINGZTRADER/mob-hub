@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   deploy-temporary:
-    if: github.head_ref == 'stage9-temp-deploy'
+    if: startsWith(github.head_ref, 'stage9-temp-')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -30,11 +30,40 @@ jobs:
       - name: Build OpenNext Worker bundle
         run: npm run cloudflare:build
 
+      - name: Verify production contacts in client bundle
+        shell: bash
+        run: |
+          grep -R -q '256780122080' .open-next/assets/_next/static/chunks
+          grep -R -q '256787735756' .open-next/assets/_next/static/chunks
+
       - name: Deploy to temporary Cloudflare account
         shell: bash
         run: |
           set -o pipefail
           npx wrangler deploy --temporary 2>&1 | tee temporary-cloudflare-deploy.log
+
+      - name: Verify live temporary Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKER_URL="$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' temporary-cloudflare-deploy.log | tail -1)"
+          test -n "$WORKER_URL"
+          echo "Verified Worker URL: $WORKER_URL"
+
+          STATUS=""
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            STATUS="$(curl -sS -o /tmp/mob-hub-home.html -w '%{http_code}' "$WORKER_URL/" || true)"
+            if [ "$STATUS" = "200" ]; then
+              break
+            fi
+            sleep 2
+          done
+          test "$STATUS" = "200"
+          grep -q 'Creative production' /tmp/mob-hub-home.html
+          grep -q 'Podcast &amp; Interview Production\|Podcast & Interview Production' /tmp/mob-hub-home.html
+          curl -fsSI "$WORKER_URL/brand/mob-hub-logo.webp" >/dev/null
+          curl -fsS "$WORKER_URL/robots.txt" | grep -q 'Sitemap'
+          curl -fsS "$WORKER_URL/sitemap.xml" | grep -q 'https://mob-hub.com'
 
       - name: Upload temporary deployment log
         if: always()
