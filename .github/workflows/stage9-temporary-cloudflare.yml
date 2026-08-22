@@ -1,0 +1,46 @@
+name: Stage 9 temporary Cloudflare deploy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-temporary:
+    if: github.head_ref == 'stage9-temp-deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Use audited npm version
+        run: npm install --global npm@11.6.2
+
+      - name: Install application dependencies
+        run: npm install --package-lock=false
+
+      - name: Build OpenNext Worker bundle
+        run: npm run cloudflare:build
+
+      - name: Deploy to temporary Cloudflare account
+        shell: bash
+        run: |
+          set -o pipefail
+          npx wrangler deploy --temporary 2>&1 | tee temporary-cloudflare-deploy.log
+
+      - name: Upload temporary deployment log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage9-temporary-cloudflare-log
+          path: temporary-cloudflare-deploy.log
+          if-no-files-found: ignore
+          retention-days: 1
