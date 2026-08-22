@@ -50,4 +50,6 @@ See `CLOUDFLARE.md` for the deployment contract.
 
 ## Stage 9 verification
 
-GitHub Actions runs linting and builds the OpenNext Worker bundle before the first Cloudflare deployment. `mob-hub.com` DNS is not changed during this verification stage.
+GitHub Actions successfully completed dependency installation, ESLint, and the full `opennextjs-cloudflare build` on an Ubuntu runner on 22 August 2026. `mob-hub.com` DNS has not been changed.
+
+The current repository media is a temporary low-weight verification set for the first `*.workers.dev` launch. The full Stage 8 optimized media remains in the retained project package and should replace the verification media before the custom domain is attached.
